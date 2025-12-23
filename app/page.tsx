@@ -208,16 +208,46 @@ const CountryList = memo(({ countries, selectedCode, onSelect }: {
 ));
 CountryList.displayName = 'CountryList';
 
-const DomainList = memo(({ allDomains, selectedDomain, onSelect }: { 
-  allDomains: string[]; 
-  selectedDomain: string; 
+const DomainList = memo(({ allDomains, selectedDomain, onSelect }: {
+  allDomains: string[];
+  selectedDomain: string;
   onSelect: (d: string) => void;
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [visibleCount, setVisibleCount] = useState(100);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+      setVisibleCount(100);
+    }, 300);
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, [searchQuery]);
+
   const filteredDomains = useMemo(() => {
-    if (!searchQuery) return allDomains;
-    return allDomains.filter(d => d.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [allDomains, searchQuery]);
+    if (!debouncedQuery) return allDomains;
+    return allDomains.filter(d => d.toLowerCase().includes(debouncedQuery.toLowerCase()));
+  }, [allDomains, debouncedQuery]);
+
+  const displayList = useMemo(() => {
+    if (!debouncedQuery) {
+      return [{ id: 'random', label: '随机域名', isRandom: true }, ...filteredDomains.slice(0, visibleCount).map(d => ({ id: d, label: d, isRandom: false }))];
+    }
+    return filteredDomains.slice(0, visibleCount).map(d => ({ id: d, label: d, isRandom: false }));
+  }, [filteredDomains, debouncedQuery, visibleCount]);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const element = e.currentTarget;
+    if (element.scrollHeight - element.scrollTop <= element.clientHeight + 100) {
+      setVisibleCount(prev => Math.min(prev + 50, filteredDomains.length + 1));
+    }
+  }, [filteredDomains.length]);
 
   return (
     <div className="flex flex-col h-full">
@@ -226,16 +256,16 @@ const DomainList = memo(({ allDomains, selectedDomain, onSelect }: {
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Icon name="search" className="w-4 h-4 text-white/40" />
           </div>
-          <input 
-            type="text" 
-            value={searchQuery} 
-            onChange={(e) => setSearchQuery(e.target.value)} 
-            placeholder="搜索域名" 
-            className="w-full pl-9 pr-8 py-2 bg-black/30 border border-white/10 rounded-[10px] text-[16px] text-white placeholder-white/30 focus:ring-2 focus:ring-white/20 focus:bg-black/40 transition-colors caret-[#007AFF] outline-none" 
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="搜索域名"
+            className="w-full pl-9 pr-8 py-2 bg-black/30 border border-white/10 rounded-[10px] text-[16px] text-white placeholder-white/30 focus:ring-2 focus:ring-white/20 focus:bg-black/40 transition-colors caret-[#007AFF] outline-none"
           />
           {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')} 
+            <button
+              onClick={() => setSearchQuery('')}
               className="absolute inset-y-0 right-0 pr-3 flex items-center touch-manipulation active:scale-90 transition-transform"
             >
               <div className="bg-white/20 rounded-full p-0.5">
@@ -245,27 +275,36 @@ const DomainList = memo(({ allDomains, selectedDomain, onSelect }: {
           )}
         </div>
       </div>
-      <div className="p-4 pt-2 space-y-2">
-        {!searchQuery && (
-          <ListItem 
-            label="随机域名" 
-            isSelected={selectedDomain === 'random'} 
-            onClick={() => onSelect('random')} 
-            icon="sparkles" 
-          />
-        )}
-        {filteredDomains.map((domain) => (
-          <ListItem 
-            key={domain} 
-            label={domain} 
-            isSelected={selectedDomain === domain} 
-            onClick={() => onSelect(domain)} 
-          />
-        ))}
-        {filteredDomains.length === 0 && (
-          <div className="text-center py-8 text-white/30 text-sm">无匹配结果</div>
-        )}
-      </div>
+      {filteredDomains.length > 0 ? (
+        <div
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto overscroll-contain p-4 pt-2 space-y-2"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {!debouncedQuery && (
+            <ListItem
+              label="随机域名"
+              isSelected={selectedDomain === 'random'}
+              onClick={() => onSelect('random')}
+              icon="sparkles"
+            />
+          )}
+          {displayList.filter(item => item.id !== 'random').map((item) => (
+            <ListItem
+              key={item.id}
+              label={item.label}
+              isSelected={selectedDomain === item.id}
+              onClick={() => onSelect(item.id)}
+            />
+          ))}
+          {visibleCount < filteredDomains.length && (
+            <div className="text-center py-4 text-white/30 text-sm">继续滚动加载更多...</div>
+          )}
+        </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-white/30 text-sm">无匹配结果</div>
+      )}
     </div>
   );
 });

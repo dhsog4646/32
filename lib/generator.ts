@@ -38,12 +38,12 @@ const COMMON_WORDS = [
   'love', 'life', 'sky', 'blue', 'fire', 'cool', 'dream', 'star', 'moon'
 ];
 
-// 年龄分布权重
+// 年龄分布权重 (预计算累积权重以加快查询)
 const AGE_DISTRIBUTION = [
-  { min: 18, max: 19, weight: 0.20 },
-  { min: 20, max: 21, weight: 0.25 },
-  { min: 22, max: 23, weight: 0.30 },
-  { min: 24, max: 25, weight: 0.25 },
+  { min: 18, max: 19, weight: 0.20, cumulative: 0.20 },
+  { min: 20, max: 21, weight: 0.25, cumulative: 0.45 },
+  { min: 22, max: 23, weight: 0.30, cumulative: 0.75 },
+  { min: 24, max: 25, weight: 0.25, cumulative: 1.00 },
 ];
 
 const DAYS_IN_MONTH_BASE = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
@@ -347,18 +347,17 @@ export function generateBirthday() {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
-  
-  let random = Math.random();
+
+  const random = Math.random();
   let age = 22;
-  
+
   for (const range of AGE_DISTRIBUTION) {
-    if (random < range.weight) {
+    if (random < range.cumulative) {
       age = secureRandom(range.min, range.max);
       break;
     }
-    random -= range.weight;
   }
-  
+
   const birthYear = currentYear - age;
   
   const avoidMonths = [
@@ -579,8 +578,14 @@ export function getCountryConfig(code: string) {
   return countries.find(c => c.code === code) || countries[0];
 }
 
+// 缓存域名列表引用，避免每次调用都创建新数组
+let cachedDomains: string[] | null = null;
+
 export function getAllDomains(): string[] {
-  return DOMAINS;
+  if (!cachedDomains) {
+    cachedDomains = DOMAINS;
+  }
+  return cachedDomains;
 }
 
 /**
