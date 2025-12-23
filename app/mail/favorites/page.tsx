@@ -112,7 +112,7 @@ const FavoriteCard = memo(({ mail, onDelete, onCopy, copiedId }: FavoriteCardPro
   const isCopied = copiedId === mail.id;
 
   return (
-    <div className="bg-black/10 rounded-[20px] overflow-hidden border border-white/20 shadow-xl transition-all duration-200 hover:border-white/30">
+    <div className="bg-black/30 rounded-[20px] overflow-hidden border border-white/20 shadow-xl transition-all duration-200 hover:border-white/30">
       <div className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0 flex items-center gap-2">
@@ -239,7 +239,7 @@ export default function FavoritesPage() {
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="bg-black/10 backdrop-blur-sm px-8 py-8 rounded-[20px] border border-white/20 shadow-xl text-center space-y-4">
+              <div className="bg-black/30 backdrop-blur-sm px-8 py-8 rounded-[20px] border border-white/20 shadow-xl text-center space-y-4">
                 <div className="flex justify-center">
                   <Icon name="inbox" className="w-12 h-12 text-white/60" />
                 </div>
